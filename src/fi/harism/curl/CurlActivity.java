@@ -23,6 +23,10 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.view.View;
+import android.widget.TextView;
 
 /**
  * Simple Activity for curl testing.
@@ -32,21 +36,38 @@ import android.os.Bundle;
 public class CurlActivity extends Activity {
 
 	private CurlView mCurlView;
-
+	private TextView[] mTextViewIds = new TextView[3];
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
+		
+		for (int i=0; i<3; i++) {
+			TextView text = new TextView(this);
+			text.setText("English is a West Germanic language " +
+					"that arose in the Anglo-Saxon kingdoms of " +
+					"England and spread into what was to become " +
+					"south-east Scotland under the influence of " +
+					"the Anglian medieval kingdom of Northumbria." +
+					" Following the extensive influence of Great " +
+					"Britain and the United Kingdom from the 18th" +
+					" century, via the British Empire, and of the" +
+					" United States since the mid-20th century,");
+			mTextViewIds[i] = text;
+		}
 
 		int index = 0;
 		if (getLastNonConfigurationInstance() != null) {
 			index = (Integer) getLastNonConfigurationInstance();
 		}
-		mCurlView = (CurlView) findViewById(R.id.curl);
+		mCurlView = (CurlView) findViewById(R.id.textCurl);
 		mCurlView.setBitmapProvider(new BitmapProvider());
 		mCurlView.setSizeChangedObserver(new SizeChangedObserver());
 		mCurlView.setCurrentIndex(index);
 		mCurlView.setBackgroundColor(0xFF202830);
+		mCurlView.setUpdateMethod(new UpdatePageNumber()); // Added a page counter
+		
+
 
 		// This is something somewhat experimental. Before uncommenting next
 		// line, please see method comments in CurlView.
@@ -71,57 +92,56 @@ public class CurlActivity extends Activity {
 	}
 
 	/**
-	 * Bitmap provider.
+	 * Bitmap provider. Added new BitmapProvider with Text bitmaps.
 	 */
-	private class BitmapProvider implements CurlView.BitmapProvider {
+    public class BitmapProvider implements CurlView.BitmapProvider {
 
-		private int[] mBitmapIds = { R.drawable.obama, R.drawable.road_rage,
-				R.drawable.taipei_101, R.drawable.world };
+        @Override
+        public Bitmap getBitmap(int width, int height, int index) {
+            Bitmap renderSurface = Bitmap.createBitmap(width, height,
+                    Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(renderSurface);
+            Paint paint = new Paint();
+            paint.setTextSize(35);
+            // maybe color the bacground..
+            canvas.drawPaint(paint);
+            // Setup a textview like you normally would with your activity context
+            TextView tv = mTextViewIds[index];
+            // setup text
+            // you have to enable setDrawingCacheEnabled, or the getDrawingCache will return null
+            tv.setDrawingCacheEnabled(true);
+            // we need to setup how big the view should be..which is exactly as big as the canvas
+            tv.measure(View.MeasureSpec.makeMeasureSpec(canvas.getWidth(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(canvas.getHeight(), View.MeasureSpec.EXACTLY));
+            // assign the layout values to the textview
+            tv.layout(0, 0, tv.getMeasuredWidth(), tv.getMeasuredHeight());
+            // draw the bitmap from the drawingcache to the canvas
+            canvas.drawBitmap(tv.getDrawingCache(), 0, 0, paint);
+            // disable drawing cache
+            tv.setDrawingCacheEnabled(false);
+            return renderSurface;
+        }
 
-		@Override
-		public Bitmap getBitmap(int width, int height, int index) {
-			Bitmap b = Bitmap.createBitmap(width, height,
-					Bitmap.Config.ARGB_8888);
-			b.eraseColor(0xFFFFFFFF);
-			Canvas c = new Canvas(b);
-			Drawable d = getResources().getDrawable(mBitmapIds[index]);
+        @Override
+        public int getBitmapCount() {
+            return mTextViewIds.length;
+        }
+    }
+    private class UpdatePageNumber implements CurlView.UpdatePageNumber {
+        public void updateNumber() {
+            reloadPages.sendEmptyMessage(0);
 
-			int margin = 7;
-			int border = 3;
-			Rect r = new Rect(margin, margin, width - margin, height - margin);
+        }
+    }
+    private Handler reloadPages = new Handler() {
 
-			int imageWidth = r.width() - (border * 2);
-			int imageHeight = imageWidth * d.getIntrinsicHeight()
-					/ d.getIntrinsicWidth();
-			if (imageHeight > r.height() - (border * 2)) {
-				imageHeight = r.height() - (border * 2);
-				imageWidth = imageHeight * d.getIntrinsicWidth()
-						/ d.getIntrinsicHeight();
-			}
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            TextView pages = (TextView) findViewById(R.id.pages);
+            pages.setText("Страница " + mCurlView.getCurrentIndex() + " из " + mTextViewIds.length);
+        }
 
-			r.left += ((r.width() - imageWidth) / 2) - border;
-			r.right = r.left + imageWidth + border + border;
-			r.top += ((r.height() - imageHeight) / 2) - border;
-			r.bottom = r.top + imageHeight + border + border;
-
-			Paint p = new Paint();
-			p.setColor(0xFFC0C0C0);
-			c.drawRect(r, p);
-			r.left += border;
-			r.right -= border;
-			r.top += border;
-			r.bottom -= border;
-
-			d.setBounds(r);
-			d.draw(c);
-			return b;
-		}
-
-		@Override
-		public int getBitmapCount() {
-			return mBitmapIds.length;
-		}
-	}
+    };
 
 	/**
 	 * CurlView size changed observer.

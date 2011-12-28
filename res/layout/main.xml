@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                      android:layout_width="fill_parent"
+                      android:layout_height="fill_parent"
+                      android:id="@+id/all" android:gravity="fill_vertical">
+<TextView android:layout_width="wrap_content" android:id="@+id/pages"
+          android:layout_height="wrap_content"
+          android:text=""/>
 <fi.harism.curl.CurlView
-	xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:id="@+id/curl" />
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:id="@+id/textCurl" android:layout_below="@id/pages"/>
+</RelativeLayout>
